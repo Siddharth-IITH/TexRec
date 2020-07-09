@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "48459736056",
+    "firebase_url": "https://texreco.firebaseio.com",
+    "project_id": "texreco",
+    "storage_bucket": "texreco.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:48459736056:android:7c920c81d4006186f62c0d",
+        "android_client_info": {
+          "package_name": "com.appworksstudio.imagetotextconverter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "48459736056-gasngtpuubvk0vn1a845pff8s3lgsq33.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.appworksstudio.imagetotextconverter",
+            "certificate_hash": "156d0245869b87cc8fa8524558aea184311624eb"
+          }
+        },
+        {
+          "client_id": "48459736056-g1oi6etcaedigpe9abdhlhq20nfjies3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7RjnHPAsNohjEWx_8WVz1WSEtdyr745g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "48459736056-g1oi6etcaedigpe9abdhlhq20nfjies3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
