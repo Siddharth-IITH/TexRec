@@ -3,5 +3,8 @@
     <string name="texrec_here">TexRec Here!!</string>
     <string name="pdf">Pdf</string>
     <string name="create">Create\t</string>
-    <string name="merge">Merge</string>
+    <string name="merge">Merge Pdf </string>
+    <string name="texscan">Tex<b>Scan</b></string>
+    <string name="save_as_filename">Save as filename</string>
+
 </resources>
