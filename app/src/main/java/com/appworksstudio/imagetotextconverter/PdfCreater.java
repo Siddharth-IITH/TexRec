@@ -1,24 +1,23 @@
 package com.appworksstudio.imagetotextconverter;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.ColorMatrix;
-import android.graphics.ColorMatrixColorFilter;
-import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +28,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -36,22 +40,43 @@ import com.itextpdf.text.Image;
 import com.itextpdf.text.pdf.PdfWriter;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.Permission;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 public class PdfCreater extends AppCompatActivity {
 
     private static final int PICK_IMAGE_GALLERY = 897;
-    private static final int REQUEST_IMAGE_CAPTURE_PDF_CREATE = 898;
+    private static final int EDIT_IMAGE = 898;
+    private static final int CAMERA_REQUEST = 999;
+
+    private static final int PERMISSION_REQUEST_CODE_EXTERNAL_READ = 1007;
+    private static final int PERMISSION_REQUEST_CODE_EXTERNAL_WRITE = 1008;
+    private static final int PERMISSION_REQUEST_CODE_CAMERA = 1008;
+
     private LinearLayout linearLayout;
-    private int[] ids;
-    private int indexOfArray = 0;
-    private int numImages = 0;
+    private int generatedId = 0;
     private EditText filenameEditText;
-    private Button saveFilenameButton, cancelFilenameButton;
+
+    public String getDirectoryLocation() {
+        return directoryLocation;
+    }
+
+    public void setDirectoryLocation(String directoryLocation) {
+        this.directoryLocation = directoryLocation;
+    }
+
+    private String directoryLocation = "";
+
+    List<Integer> list = new ArrayList<>();
+    List<String> fileList = new ArrayList<>();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,10 +85,8 @@ public class PdfCreater extends AppCompatActivity {
 
         //Initialization
         ImageButton addImageButton = findViewById(R.id.btn_add_image);
-        Button mergeButton = findViewById(R.id.btn_save);
+        Button mergeButton = findViewById(R.id.crop_btn);
         linearLayout = findViewById(R.id.cl_for_image);
-        ids = new int[30];
-
 
         //setting listener on Add Image Button
         addImageButton.setOnClickListener(new View.OnClickListener() {
@@ -78,9 +101,6 @@ public class PdfCreater extends AppCompatActivity {
         mergeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (int id : ids) {
-                    System.out.println("valPath" + id);
-                }
 
                 createFilenameAsk(v);
 
@@ -88,6 +108,7 @@ public class PdfCreater extends AppCompatActivity {
             }
         });
     }
+
 
     private void createDialog() {
         String[] items = {"Choose Image from gallery", "Capture Image"};
@@ -99,9 +120,20 @@ public class PdfCreater extends AppCompatActivity {
                     public void onClick(DialogInterface dialog, int which) {
 
                         if (which == 0) {
-                            pickImageFromGallery();
+
+                            //Pick Image from Gallery
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                                    requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_EXTERNAL_READ);
+                                } else {
+                                    pickImageFromGallery();
+                                }
+                            }
+
                         } else {
+                            //Capture Image From Camera
                             captureImage();
+
                         }
                     }
                 }).show();
@@ -109,9 +141,13 @@ public class PdfCreater extends AppCompatActivity {
     }
 
     private void captureImage() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE_PDF_CREATE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CODE_CAMERA);
+            } else {
+                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(cameraIntent, CAMERA_REQUEST);
+            }
         }
     }
 
@@ -128,65 +164,155 @@ public class PdfCreater extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
 
-        //Pick Image from Gallery
-        if (requestCode == PICK_IMAGE_GALLERY) {
+        /**
+         * Pick Image from Gallery
+         **/
 
-            Uri selectedImage = data.getData();
-            String[] filePathColumn = {MediaStore.Images.Media.DATA};
+        if (requestCode == PICK_IMAGE_GALLERY && data != null) {
+            //getFilePath
+            String path = getPicturePath(data);
+            generatedId += 1;
+            list.add(generatedId);
+            Date currentTime = Calendar.getInstance().getTime();
+            String filename = currentTime.toString().replace(":", "_").replace(" ", "_").replace("+", "_");
+            Bitmap b = BitmapFactory.decodeFile(path);
+            String p = saveToInternalStorage(b,
+                    filename);
+            fileList.add(filename);
+//            loadImageFromStorage(p, generatedId);
+            //cache the image and get bitmap
+            cacheMyImage(path, generatedId);
 
-            Cursor cursor = getContentResolver().query(selectedImage,
-                    filePathColumn, null, null, null);
-            cursor.moveToFirst();
+            Intent intent = new Intent(this, ImageEditor.class);
+            intent.putExtra("filename", filename);
+            intent.putExtra("path", p);
+            startActivityForResult(intent, EDIT_IMAGE);
 
-            int columnIndex = ((Cursor) cursor).getColumnIndex(filePathColumn[0]);
-            String picturePath = cursor.getString(columnIndex);
-            cursor.close();
 
-            ImageView childView = new ImageView(this);
-            // set view id, else getId() returns -1
-            int tempId = View.generateViewId();
-            ids[indexOfArray] = tempId;
-            childView.setId(tempId);
-            File cacheDir = getCacheDir();
-            Bitmap bmp = BitmapFactory.decodeFile(picturePath);
+        }
 
-            File file = new File(cacheDir.getAbsolutePath(), "temp_image" + tempId + ".jpg");
-            numImages += 1;
-            Toast.makeText(this, "t: " + tempId, Toast.LENGTH_SHORT).show();
 
+        /**
+         * Pick Image From Camera
+         */
+        if (requestCode == CAMERA_REQUEST && resultCode == Activity.RESULT_OK) {
+            Bitmap photo = (Bitmap) data.getExtras().get("data");
+            generatedId += 1;
+            int tempId = generatedId;
+            list.add(tempId);
+
+            Date currentTime = Calendar.getInstance().getTime();
+            String filename = currentTime.toString().replace(":", "_").replace(" ", "_").replace("+", "_");
+
+            String p = saveToInternalStorage(photo, filename);
+            fileList.add(filename);
+            Intent intent = new Intent(this, ImageEditor.class);
+
+            intent.putExtra("filename", filename);
+            intent.putExtra("path", p);
+            startActivityForResult(intent, EDIT_IMAGE);
+//            pathList.add(p);
+//            loadImageFromStorage(p);
+            Log.d("ppath", p);
+        }
+
+        if (resultCode != RESULT_CANCELED) {
+            if (requestCode == EDIT_IMAGE) {
+
+                String edited_filename = data.getStringExtra("filename");
+//                File cacheDir = getCacheDir();
+//                Drawable d = Drawable.createFromPath(cacheDir.getAbsolutePath() + "/" + "temp_image" + tempIdReturn + ".jpg");
+                loadImageFromStorage(getDirectoryLocation(), edited_filename);
+//                ImageView childView = new ImageView(this);
+//
+//                childView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+//                childView.setAdjustViewBounds(true);
+//                childView.setPadding(10, 10, 10, 10);
+//                childView.setImageDrawable(d);
+//                linearLayout.addView(childView);
+            }
+        }
+
+
+    }
+
+    public String saveToInternalStorage(Bitmap bitmapImage, String filename) {
+        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        // path to /data/data/yourapp/app_data/imageDir
+
+        File directory = cw.getDir("Texscan", Context.MODE_PRIVATE);
+
+        if (!directory.exists()) {
+            directory.mkdir();
+        }
+        Log.d("directory", directory.getAbsolutePath().toString());
+        // Create imageDir
+        File mypath = new File(directory, filename + ".jpg");
+
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(mypath);
+            // Use the compress method on the BitMap object to write image to the OutputStream
+            bitmapImage.compress(Bitmap.CompressFormat.PNG, 100, fos);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
             try {
-                FileOutputStream fos = new FileOutputStream(file);
-
-                bmp.compress(Bitmap.CompressFormat.JPEG, 100, fos);
-            } catch (FileNotFoundException e) {
+                fos.close();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            childView.setScaleType(ImageView.ScaleType.FIT_XY);
-            childView.setPadding(10, 10, 10, 10);
-            childView.setImageBitmap(bmp);
-            linearLayout.addView(childView);
-
-
         }
+        setDirectoryLocation(directory.getAbsolutePath());
 
-        //Pick Image From Camera
-        if (requestCode == REQUEST_IMAGE_CAPTURE_PDF_CREATE && resultCode == RESULT_OK) {
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
-
-            int tempId = View.generateViewId();
-            ids[indexOfArray] = tempId;
-            ImageView childView = new ImageView(this);
-            // set view id, else getId() returns -1
-            childView.setId(tempId);
-            childView.setImageBitmap(imageBitmap);
-            linearLayout.addView(childView);
-
-
-        }
-        indexOfArray++;
+        return directory.getAbsolutePath();
     }
+
+    private void loadImageFromStorage(String path, String filename) {
+
+        try {
+            File f = new File(path, filename + ".jpg");
+            Bitmap b = BitmapFactory.decodeStream(new FileInputStream(f));
+            ImageView childView = new ImageView(this);
+            childView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            childView.setAdjustViewBounds(true);
+            childView.setPadding(10, 10, 10, 10);
+            childView.setImageBitmap(b);
+            linearLayout.addView(childView);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+    private void cacheMyImage(String ppath, int tempId) {
+
+        Toast.makeText(this, "tempId" + tempId, Toast.LENGTH_SHORT).show();
+
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (checkPermission()) {
+
+                File cacheDir = getCacheDir();
+                Bitmap bmp = BitmapFactory.decodeFile(ppath);
+                File file = new File(cacheDir, "temp_image" + tempId + ".jpg");
+
+                try {
+                    FileOutputStream fos = new FileOutputStream(file);
+
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                    fos.flush();
+                    fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            requestPermission(); // Code for permission
+        }
+
+    }
+
 
     private void createPDF(View v, String filename) throws IOException, DocumentException {
 
@@ -206,8 +332,9 @@ public class PdfCreater extends AppCompatActivity {
         File cfile = new File(cacheDir.getAbsolutePath());
 
 
-        for (int id = 1; id <= numImages; id++) {
-            image = Image.getInstance(cfile + "/" + "temp_image" + id + ".jpg");
+//        for (int id = 1; id <= numImages; id++) {
+        for (int id = 0; id < list.size(); id++) {
+            image = Image.getInstance(cfile + "/" + "temp_image" + list.get(id) + ".jpg");
 
 
             float scaler = ((document.getPageSize().getWidth() - document.leftMargin()
@@ -220,16 +347,6 @@ public class PdfCreater extends AppCompatActivity {
             document.newPage();
 
         }
-
-//        Image image2 = Image.getInstance(cfile + "/" + "temp_image2.jpg");
-//
-//
-//        float scaler2 = ((document.getPageSize().getWidth() - document.leftMargin()
-//                - document.rightMargin() - 0) / image.getWidth()) * 100; // 0 means you have no indentation. If you have any, change it.
-//        image2.scalePercent(scaler2);
-//        image2.setAlignment(Image.ALIGN_CENTER | Image.ALIGN_TOP);
-//
-//        document.add(image2);
         document.close();
         Toast.makeText(this, "completed", Toast.LENGTH_SHORT).show();
         deleteCache(this);
@@ -246,8 +363,8 @@ public class PdfCreater extends AppCompatActivity {
         final AlertDialog alertDialog = builder.create();
         alertDialog.setCancelable(false);
         alertDialog.show();
-        saveFilenameButton = dialogView.findViewById(R.id.btn_save_filename);
-        cancelFilenameButton = dialogView.findViewById(R.id.btn_cancel_filename);
+        Button saveFilenameButton = dialogView.findViewById(R.id.btn_save_filename);
+        Button cancelFilenameButton = dialogView.findViewById(R.id.btn_cancel_filename);
         filenameEditText = dialogView.findViewById(R.id.et_filename);
 
         saveFilenameButton.setOnClickListener(new View.OnClickListener() {
@@ -259,7 +376,14 @@ public class PdfCreater extends AppCompatActivity {
                         filenameEditText.setError("Enter valid filename");
                         return;
                     } else {
-                        createPDF(v, filename);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_EXTERNAL_WRITE);
+                            } else {
+                                createPDF(v, filename);
+                            }
+                        }
+
                     }
 
 
@@ -305,5 +429,60 @@ public class PdfCreater extends AppCompatActivity {
         }
     }
 
+    private String getPicturePath(Intent data) {
+        Uri selectedImage = data.getData();
+        String[] filePathColumn = {MediaStore.Images.Media.DATA};
+        Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
+        cursor.moveToFirst();
+        int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+        String picturePath = cursor.getString(columnIndex);
+        cursor.close();
+        Toast.makeText(this, "imagepath"+picturePath, Toast.LENGTH_SHORT).show();
+        return picturePath;
+
+    }
+
+    private boolean checkPermission() {
+        int result = ContextCompat.checkSelfPermission(PdfCreater.this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        return result == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(PdfCreater.this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            Toast.makeText(PdfCreater.this, "Write External Storage permission allows us to save files. Please allow this permission in App Settings.", Toast.LENGTH_LONG).show();
+        } else {
+            ActivityCompat.requestPermissions(PdfCreater.this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_CAMERA);
+        }
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == PERMISSION_REQUEST_CODE_CAMERA) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.e("value", "Permission Granted, Now you can use Camera .");
+            } else {
+                Log.e("value", "Permission Denied, You cannot use Camera .");
+            }
+        }
+        if (requestCode == PERMISSION_REQUEST_CODE_EXTERNAL_READ) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.e("value", "Permission Granted, Now you can use External read .");
+            } else {
+                Log.e("value", "Permission Denied, You cannot use External read .");
+            }
+        }
+        if (requestCode == PERMISSION_REQUEST_CODE_EXTERNAL_WRITE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.e("value", "Permission Granted, Now you can use External write .");
+            } else {
+                Log.e("value", "Permission Denied, You cannot use External write .");
+            }
+        }
+
+    }
+
 
 }
+
+
