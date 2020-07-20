@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -37,6 +38,7 @@ import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Image;
 import com.itextpdf.text.pdf.PdfWriter;
+import com.theartofdev.edmodo.cropper.CropImage;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -163,6 +165,42 @@ public class PdfCreater extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
 
+        if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
+            CropImage.ActivityResult result = CropImage.getActivityResult(data);
+            if (resultCode == RESULT_OK) {
+                Uri resultUri = result.getUri();
+
+                ImageView childView = new ImageView(this);
+//
+//                childView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+//                childView.setAdjustViewBounds(true);
+//                childView.setPadding(10, 10, 10, 10);
+                childView.setImageURI(resultUri);
+                BitmapDrawable drawable = (BitmapDrawable) childView.getDrawable();
+                Bitmap b = drawable.getBitmap();
+//                linearLayout.addView(childView);
+                generatedId += 1;
+                list.add(generatedId);
+                Date currentTime = Calendar.getInstance().getTime();
+                String filename = currentTime.toString().replace(":", "_").replace(" ", "_").replace("+", "_");
+                //Bitmap b = BitmapFactory.decodeFile(path);
+
+                //String p = saveToInternalStorage(b,filename);
+                fileList.add(filename);
+//            loadImageFromStorage(p, generatedId);
+                //cache the image and get bitmap
+//                cacheMyImage(getDirectoryLocation(), filename);
+//
+                cacheMyBitmap(b, filename);
+
+                Intent intent = new Intent(this, ImageEditor.class);
+                intent.putExtra("filename", filename);
+                //intent.putExtra("path", getCacheDir());
+                startActivityForResult(intent, EDIT_IMAGE);
+            } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
+                Exception error = result.getError();
+            }
+        }
         /**
          * Pick Image from Gallery
          **/
@@ -170,22 +208,27 @@ public class PdfCreater extends AppCompatActivity {
         if (requestCode == PICK_IMAGE_GALLERY && data != null) {
             //getFilePath
             String path = getPicturePath(data);
-            generatedId += 1;
-            list.add(generatedId);
-            Date currentTime = Calendar.getInstance().getTime();
-            String filename = currentTime.toString().replace(":", "_").replace(" ", "_").replace("+", "_");
-            Bitmap b = BitmapFactory.decodeFile(path);
-            String p = saveToInternalStorage(b,
-                    filename);
-            fileList.add(filename);
-//            loadImageFromStorage(p, generatedId);
-            //cache the image and get bitmap
-            cacheMyImage(path, generatedId);
-
-            Intent intent = new Intent(this, ImageEditor.class);
-            intent.putExtra("filename", filename);
-            intent.putExtra("path", p);
-            startActivityForResult(intent, EDIT_IMAGE);
+            Uri uri = data.getData();
+            setDirectoryLocation(path);
+            CropImage.activity(uri)
+                    .start(this);
+//            generatedId += 1;
+//            list.add(generatedId);
+//            Date currentTime = Calendar.getInstance().getTime();
+//            String filename = currentTime.toString().replace(":", "_").replace(" ", "_").replace("+", "_");
+//            Bitmap b = BitmapFactory.decodeFile(path);
+//
+//            //String p = saveToInternalStorage(b,filename);
+//            fileList.add(filename);
+////            loadImageFromStorage(p, generatedId);
+//            //cache the image and get bitmap
+//            cacheMyImage(path, filename);
+//
+//
+//            Intent intent = new Intent(this, ImageEditor.class);
+//            intent.putExtra("filename", filename);
+//            //intent.putExtra("path", getCacheDir());
+//            startActivityForResult(intent, EDIT_IMAGE);
 
 
         }
@@ -200,28 +243,48 @@ public class PdfCreater extends AppCompatActivity {
             int tempId = generatedId;
             list.add(tempId);
 
+
             Date currentTime = Calendar.getInstance().getTime();
             String filename = currentTime.toString().replace(":", "_").replace(" ", "_").replace("+", "_");
 
-            String p = saveToInternalStorage(photo, filename);
+            // String p = saveToInternalStorage(photo, filename);
+            cacheMyBitmap(photo, filename);
             fileList.add(filename);
-            Intent intent = new Intent(this, ImageEditor.class);
+            Intent intent = new Intent(PdfCreater.this, ImageEditor.class);
 
             intent.putExtra("filename", filename);
-            intent.putExtra("path", p);
+            //  intent.putExtra("path", p);
             startActivityForResult(intent, EDIT_IMAGE);
+
+
 //            pathList.add(p);
 //            loadImageFromStorage(p);
-            Log.d("ppath", p);
+
         }
 
         if (resultCode != RESULT_CANCELED) {
             if (requestCode == EDIT_IMAGE) {
 
                 String edited_filename = data.getStringExtra("filename");
+                File cacheDir = getCacheDir();
+
+                File f = new File(cacheDir, edited_filename + ".jpg");
+
+                try {
+                    Bitmap colorBitmap = BitmapFactory.decodeStream(new FileInputStream(f));
+                    ImageView childView = new ImageView(this);
+
+                    childView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    childView.setAdjustViewBounds(true);
+                    childView.setPadding(10, 10, 10, 10);
+                    childView.setImageBitmap(colorBitmap);
+                    linearLayout.addView(childView);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
 //                File cacheDir = getCacheDir();
 //                Drawable d = Drawable.createFromPath(cacheDir.getAbsolutePath() + "/" + "temp_image" + tempIdReturn + ".jpg");
-                loadImageFromStorage(getDirectoryLocation(), edited_filename);
+                //    loadImageFromStorage(getDirectoryLocation(), edited_filename);
 //                ImageView childView = new ImageView(this);
 //
 //                childView.setScaleType(ImageView.ScaleType.FIT_CENTER);
@@ -252,7 +315,12 @@ public class PdfCreater extends AppCompatActivity {
         try {
             fos = new FileOutputStream(mypath);
             // Use the compress method on the BitMap object to write image to the OutputStream
-            bitmapImage.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            if (bitmapImage.getByteCount() / 1048576 > 4) {
+                Toast.makeText(cw, "large file called", Toast.LENGTH_SHORT).show();
+                bitmapImage.compress(Bitmap.CompressFormat.PNG, 60, fos);
+            } else {
+                bitmapImage.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -265,6 +333,21 @@ public class PdfCreater extends AppCompatActivity {
         setDirectoryLocation(directory.getAbsolutePath());
 
         return directory.getAbsolutePath();
+    }
+
+    public Bitmap getResizedBitmap(Bitmap image, int maxSize) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        float bitmapRatio = (float) width / (float) height;
+        if (bitmapRatio > 1) {
+            width = maxSize;
+            height = (int) (width / bitmapRatio);
+        } else {
+            height = maxSize;
+            width = (int) (height * bitmapRatio);
+        }
+        return Bitmap.createScaledBitmap(image, width, height, true);
     }
 
     private void loadImageFromStorage(String path, String filename) {
@@ -285,16 +368,17 @@ public class PdfCreater extends AppCompatActivity {
     }
 
 
-    private void cacheMyImage(String ppath, int tempId) {
+    private void cacheMyImage(String ppath, String filename) {
 
-        Toast.makeText(this, "tempId" + tempId, Toast.LENGTH_SHORT).show();
 
         if (Build.VERSION.SDK_INT >= 23) {
-            if (checkPermission()) {
 
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_EXTERNAL_READ);
+            } else {
                 File cacheDir = getCacheDir();
                 Bitmap bmp = BitmapFactory.decodeFile(ppath);
-                File file = new File(cacheDir, "temp_image" + tempId + ".jpg");
+                File file = new File(cacheDir, filename + ".jpg");
 
                 try {
                     FileOutputStream fos = new FileOutputStream(file);
@@ -306,8 +390,36 @@ public class PdfCreater extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
-        } else {
-            requestPermission(); // Code for permission
+
+
+        }
+
+    }
+
+    private void cacheMyBitmap(Bitmap bitmap, String filename) {
+
+
+        if (Build.VERSION.SDK_INT >= 23) {
+
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_EXTERNAL_READ);
+            } else {
+                File cacheDir = getCacheDir();
+                Bitmap bmp = bitmap;
+                File file = new File(cacheDir, filename + ".jpg");
+
+                try {
+                    FileOutputStream fos = new FileOutputStream(file);
+
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                    fos.flush();
+                    fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+
         }
 
     }
@@ -333,7 +445,7 @@ public class PdfCreater extends AppCompatActivity {
 
 //        for (int id = 1; id <= numImages; id++) {
         for (int id = 0; id < list.size(); id++) {
-            image = Image.getInstance(cfile + "/" + "temp_image" + list.get(id) + ".jpg");
+            image = Image.getInstance(cfile + "/" + fileList.get(id) + ".jpg");
 
 
             float scaler = ((document.getPageSize().getWidth() - document.leftMargin()
@@ -436,7 +548,7 @@ public class PdfCreater extends AppCompatActivity {
         int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
         String picturePath = cursor.getString(columnIndex);
         cursor.close();
-        Toast.makeText(this, "imagepath"+picturePath, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "imagepath" + picturePath, Toast.LENGTH_SHORT).show();
         return picturePath;
 
     }

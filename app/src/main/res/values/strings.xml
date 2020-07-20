@@ -6,5 +6,7 @@
     <string name="merge">Merge Pdf </string>
     <string name="texscan">Tex<b>Scan</b></string>
     <string name="save_as_filename">Save as filename</string>
+    <string name="rotate_anticlockwise">Rotate Anticlockwise</string>
+    <string name="rotate_clockwise">Rotate clockwise</string>
 
 </resources>
