@@ -7,8 +7,8 @@
         name="external_files_files"
         path="." />
     <external-path
-        name="external_files"
-        path="." />
+        name="my_images"
+        path="Android/data/com.appworksstudio.imagetotextconverter/files/Pictures" />
     <cache-path
         name="cache_files"
         path="." />
