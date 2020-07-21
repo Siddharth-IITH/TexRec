@@ -3,7 +3,6 @@ package com.appworksstudio.imagetotextconverter;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -32,6 +31,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.itextpdf.text.Document;
@@ -239,22 +239,50 @@ public class PdfCreater extends AppCompatActivity {
          */
         if (requestCode == CAMERA_REQUEST && resultCode == Activity.RESULT_OK) {
             Bitmap photo = (Bitmap) data.getExtras().get("data");
-            generatedId += 1;
-            int tempId = generatedId;
-            list.add(tempId);
+
+            Uri outputFileUri = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_EXTERNAL_READ);
+                } else {
+
+                    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_EXTERNAL_WRITE);
+                    } else {
+                        outputFileUri = getCaptureImageOutputUri();
+                        Toast.makeText(this, "ex uri:" + outputFileUri, Toast.LENGTH_SHORT).show();
+                    }
 
 
-            Date currentTime = Calendar.getInstance().getTime();
-            String filename = currentTime.toString().replace(":", "_").replace(" ", "_").replace("+", "_");
+                }
+            }
 
-            // String p = saveToInternalStorage(photo, filename);
-            cacheMyBitmap(photo, filename);
-            fileList.add(filename);
-            Intent intent = new Intent(PdfCreater.this, ImageEditor.class);
+            Toast.makeText(this, "o: " + outputFileUri, Toast.LENGTH_SHORT).show();
+            ImageView childView = new ImageView(this);
 
-            intent.putExtra("filename", filename);
-            //  intent.putExtra("path", p);
-            startActivityForResult(intent, EDIT_IMAGE);
+            childView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            childView.setAdjustViewBounds(true);
+            childView.setPadding(10, 10, 10, 10);
+            childView.setImageURI(outputFileUri);
+            linearLayout.addView(childView);
+            CropImage.activity(outputFileUri)
+                    .start(this);
+//            generatedId += 1;
+//            int tempId = generatedId;
+//            list.add(tempId);
+//
+//
+//            Date currentTime = Calendar.getInstance().getTime();
+//            String filename = currentTime.toString().replace(":", "_").replace(" ", "_").replace("+", "_");
+//
+//            // String p = saveToInternalStorage(photo, filename);
+//            cacheMyBitmap(photo, filename);
+//            fileList.add(filename);
+//            Intent intent = new Intent(PdfCreater.this, ImageEditor.class);
+//
+//            intent.putExtra("filename", filename);
+//            //  intent.putExtra("path", p);
+//            startActivityForResult(intent, EDIT_IMAGE);
 
 
 //            pathList.add(p);
@@ -298,75 +326,87 @@ public class PdfCreater extends AppCompatActivity {
 
     }
 
-    public String saveToInternalStorage(Bitmap bitmapImage, String filename) {
-        ContextWrapper cw = new ContextWrapper(getApplicationContext());
-        // path to /data/data/yourapp/app_data/imageDir
+    //
+//    public String saveToInternalStorage(Bitmap bitmapImage, String filename) {
+//        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+//        // path to /data/data/yourapp/app_data/imageDir
+//
+//        File directory = cw.getDir("Texscan", Context.MODE_PRIVATE);
+//
+//        if (!directory.exists()) {
+//            directory.mkdir();
+//        }
+//        Log.d("directory", directory.getAbsolutePath().toString());
+//        // Create imageDir
+//        File mypath = new File(directory, filename + ".jpg");
+//
+//        FileOutputStream fos = null;
+//        try {
+//            fos = new FileOutputStream(mypath);
+//            // Use the compress method on the BitMap object to write image to the OutputStream
+//            if (bitmapImage.getByteCount() / 1048576 > 4) {
+//                Toast.makeText(cw, "large file called", Toast.LENGTH_SHORT).show();
+//                bitmapImage.compress(Bitmap.CompressFormat.PNG, 60, fos);
+//            } else {
+//                bitmapImage.compress(Bitmap.CompressFormat.PNG, 100, fos);
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//            try {
+//                fos.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        setDirectoryLocation(directory.getAbsolutePath());
+//
+//        return directory.getAbsolutePath();
+//    }
+    private Uri getCaptureImageOutputUri() {
+        Uri outputFileUri = null;
+        File getImage = getExternalCacheDir();
+        if (getImage != null) {
 
-        File directory = cw.getDir("Texscan", Context.MODE_PRIVATE);
-
-        if (!directory.exists()) {
-            directory.mkdir();
+            outputFileUri = FileProvider.getUriForFile(getApplication(),
+                    getApplication().getPackageName() + ".fileProvider", new File(getImage.getPath(), "pickImageResult.jpeg"));
         }
-        Log.d("directory", directory.getAbsolutePath().toString());
-        // Create imageDir
-        File mypath = new File(directory, filename + ".jpg");
-
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(mypath);
-            // Use the compress method on the BitMap object to write image to the OutputStream
-            if (bitmapImage.getByteCount() / 1048576 > 4) {
-                Toast.makeText(cw, "large file called", Toast.LENGTH_SHORT).show();
-                bitmapImage.compress(Bitmap.CompressFormat.PNG, 60, fos);
-            } else {
-                bitmapImage.compress(Bitmap.CompressFormat.PNG, 100, fos);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                fos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        setDirectoryLocation(directory.getAbsolutePath());
-
-        return directory.getAbsolutePath();
+        return outputFileUri;
     }
 
-    public Bitmap getResizedBitmap(Bitmap image, int maxSize) {
-        int width = image.getWidth();
-        int height = image.getHeight();
 
-        float bitmapRatio = (float) width / (float) height;
-        if (bitmapRatio > 1) {
-            width = maxSize;
-            height = (int) (width / bitmapRatio);
-        } else {
-            height = maxSize;
-            width = (int) (height * bitmapRatio);
-        }
-        return Bitmap.createScaledBitmap(image, width, height, true);
-    }
-
-    private void loadImageFromStorage(String path, String filename) {
-
-        try {
-            File f = new File(path, filename + ".jpg");
-            Bitmap b = BitmapFactory.decodeStream(new FileInputStream(f));
-            ImageView childView = new ImageView(this);
-            childView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            childView.setAdjustViewBounds(true);
-            childView.setPadding(10, 10, 10, 10);
-            childView.setImageBitmap(b);
-            linearLayout.addView(childView);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
-    }
-
+//    public Bitmap getResizedBitmap(Bitmap image, int maxSize) {
+//        int width = image.getWidth();
+//        int height = image.getHeight();
+//
+//        float bitmapRatio = (float) width / (float) height;
+//        if (bitmapRatio > 1) {
+//            width = maxSize;
+//            height = (int) (width / bitmapRatio);
+//        } else {
+//            height = maxSize;
+//            width = (int) (height * bitmapRatio);
+//        }
+//        return Bitmap.createScaledBitmap(image, width, height, true);
+//    }
+//
+//    private void loadImageFromStorage(String path, String filename) {
+//
+//        try {
+//            File f = new File(path, filename + ".jpg");
+//            Bitmap b = BitmapFactory.decodeStream(new FileInputStream(f));
+//            ImageView childView = new ImageView(this);
+//            childView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+//            childView.setAdjustViewBounds(true);
+//            childView.setPadding(10, 10, 10, 10);
+//            childView.setImageBitmap(b);
+//            linearLayout.addView(childView);
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
+//
 
     private void cacheMyImage(String ppath, String filename) {
 

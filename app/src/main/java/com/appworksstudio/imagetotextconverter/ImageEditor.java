@@ -83,7 +83,6 @@ public class ImageEditor extends AppCompatActivity {
                 editedImage.buildDrawingCache();
                 Bitmap source = editedImage.getDrawingCache();
                 Bitmap rotatedImage = rotateImage(source, angle);
-                editedImage.setImageBitmap(null);
                 editedImage.setImageBitmap(rotatedImage);
                 editedImage.invalidate();
             }
