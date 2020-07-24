@@ -2,13 +2,13 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.google.gms.google-services'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
     buildToolsVersion "28.0.3"
 
     defaultConfig {
         applicationId "com.appworksstudio.imagetotextconverter"
         minSdkVersion 19
-        targetSdkVersion 28
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
 
@@ -38,6 +38,7 @@ dependencies {
     implementation "com.google.android.material:material:1.1.0"
     implementation 'com.afollestad.material-dialogs:input:3.3.0'
     implementation 'com.android.support:multidex:1.0.3'
+
 
 
     implementation 'com.theartofdev.edmodo:android-image-cropper:2.8.+'

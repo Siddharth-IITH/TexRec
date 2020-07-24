@@ -60,23 +60,13 @@ public class PdfCreater extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE_EXTERNAL_WRITE = 1008;
     private static final int PERMISSION_REQUEST_CODE_CAMERA = 1008;
 
+    private Uri currentUri;
     private LinearLayout linearLayout;
-    private int generatedId = 0;
     private EditText filenameEditText;
 
     String currentImagePath = null;
 
-    public String getDirectoryLocation() {
-        return directoryLocation;
-    }
 
-    public void setDirectoryLocation(String directoryLocation) {
-        this.directoryLocation = directoryLocation;
-    }
-
-    private String directoryLocation = "";
-
-    List<Integer> list = new ArrayList<>();
     List<String> fileList = new ArrayList<>();
 
 
@@ -99,7 +89,9 @@ public class PdfCreater extends AppCompatActivity {
 
         });
 
-        //create PDF
+        /**
+         * create PDF
+         */
         mergeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -112,7 +104,6 @@ public class PdfCreater extends AppCompatActivity {
                         createFilenameAsk(v);
                     }
                 }
-
 
 
             }
@@ -225,6 +216,9 @@ public class PdfCreater extends AppCompatActivity {
 
                 Intent intent = new Intent(this, ImageEditor.class);
                 intent.putExtra("filename", filename);
+                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.setData(getCurrentUri());
+
                 startActivityForResult(intent, EDIT_IMAGE);
             } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
                 Exception error = result.getError();
@@ -237,9 +231,9 @@ public class PdfCreater extends AppCompatActivity {
 
         if (requestCode == PICK_IMAGE_GALLERY && data != null) {
             //getFilePath
-            String path = getPicturePath(data);
+//            String path = getPicturePath(data);
             Uri uri = data.getData();
-            setDirectoryLocation(path);
+            setCurrentUri(uri);
             CropImage.activity(uri)
                     .start(this);
 
@@ -251,6 +245,7 @@ public class PdfCreater extends AppCompatActivity {
          */
         if (requestCode == CAMERA_REQUEST && resultCode == Activity.RESULT_OK) {
 
+            setCurrentUri(Uri.fromFile(new File(currentImagePath)));
             CropImage.activity(Uri.fromFile(new File(currentImagePath)))
                     .start(this);
 
@@ -462,6 +457,13 @@ public class PdfCreater extends AppCompatActivity {
     }
 
 
+    public Uri getCurrentUri() {
+        return currentUri;
+    }
+
+    public void setCurrentUri(Uri currentUri) {
+        this.currentUri = currentUri;
+    }
 }
 
 
