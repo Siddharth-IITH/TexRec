@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Matrix;
@@ -50,10 +49,9 @@ public class ImageEditor extends AppCompatActivity {
     public static Bitmap rotateImage(Bitmap sourceImage, float angle) {
         Matrix matrix = new Matrix();
         matrix.postRotate(angle);
+
         Bitmap bm = Bitmap.createBitmap(sourceImage, 0, 0, sourceImage.getWidth(),
                 sourceImage.getHeight(), matrix, true);
-        bm.setHasAlpha(true);
-        bm.eraseColor(Color.TRANSPARENT);
 
         return bm;
     }
@@ -109,6 +107,8 @@ public class ImageEditor extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 colorOrBnw = true;
+                tilt.setProgress(50);
+
                 editedImage.setImageBitmap(colorBitmap);
             }
         });
@@ -121,6 +121,7 @@ public class ImageEditor extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 colorOrBnw = false;
+                tilt.setProgress(50);
                 editedImage.setImageBitmap(bnwBitmap);
             }
         });
@@ -210,8 +211,6 @@ public class ImageEditor extends AppCompatActivity {
                 editedImage.buildDrawingCache();
                 Bitmap source = editedImage.getDrawingCache();
                 Bitmap rotatedImage = rotateImage(source, angle);
-
-
                 editedImage.setImageBitmap(rotatedImage);
 
 

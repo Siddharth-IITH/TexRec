@@ -1,15 +1,10 @@
 package com.appworksstudio.imagetotextconverter;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-
-import android.app.ActivityOptions;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
-import android.transition.Explode;
 import android.view.View;
-import android.view.Window;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -22,11 +17,23 @@ public class TexScan extends AppCompatActivity {
         // inside your activity (if you did not enable transitions in your theme)
 
         FloatingActionButton floatingActionButton =
-                (FloatingActionButton) findViewById(R.id.fab_scan);
+                (FloatingActionButton) findViewById(R.id.copy_btn);
         floatingActionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent  = new Intent(TexScan.this,PdfCreater.class);
+                Intent intent = new Intent(TexScan.this, PdfCreater.class);
+
+                startActivity(intent);
+
+            }
+        });
+
+        FloatingActionButton texrec =
+                findViewById(R.id.texrec);
+        texrec.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(TexScan.this, MainActivity.class);
 
                 startActivity(intent);
 

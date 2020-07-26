@@ -61,11 +61,12 @@
         <SeekBar
             android:id="@+id/tilt"
             android:layout_width="wrap_content"
-
             android:layout_height="wrap_content"
             android:layout_weight="3"
+            android:background="#eee"
             android:indeterminate="false"
-            android:progress="50" />
+            android:progress="50"
+            android:progressDrawable="@android:color/transparent" />
 
         <ImageButton
             android:id="@+id/rotate_p90"

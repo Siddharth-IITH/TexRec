@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Image To Text converter</string>
+    <string name="app_name">TexScan</string>
     <string name="texrec_here">TexRec Here!!</string>
     <string name="pdf">Pdf</string>
     <string name="create">Create\t</string>

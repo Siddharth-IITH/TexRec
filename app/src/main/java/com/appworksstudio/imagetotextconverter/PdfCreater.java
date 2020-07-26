@@ -320,6 +320,22 @@ public class PdfCreater extends AppCompatActivity {
                 currentTime.toString().replace(":", "_").replace(" ", "_")
                 + ".pdf")); //  Change pdf's name.
 
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+//                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_EXTERNAL_WRITE);
+//            } else {
+//                Date currentTime = Calendar.getInstance().getTime();
+//                File file = new File(getApplicationContext().getFilesDir()+File.separator+"texscan/"+
+//                        currentTime.toString().replace(":", "_").replace(" ", "_")+".pdf");
+//                if (!file.exists()) {
+//                    file.mkdirs();
+//                }
+//                FileOutputStream fos =new FileOutputStream(file);
+//                PdfWriter.getInstance(document, fos);
+//
+//            }
+//        }
+
         document.open();
         File cacheDir = getCacheDir();
         Image image = null;
@@ -327,6 +343,7 @@ public class PdfCreater extends AppCompatActivity {
 
         for (int id = 0; id < fileList.size(); id++) {
             image = Image.getInstance(cfile + "/" + fileList.get(id) + ".jpg");
+            document.setMargins(10, 10, 10, 10);
 
 
             float scaler = ((document.getPageSize().getWidth() - document.leftMargin()
@@ -336,6 +353,7 @@ public class PdfCreater extends AppCompatActivity {
 
 
             document.add(image);
+
             document.newPage();
 
         }
